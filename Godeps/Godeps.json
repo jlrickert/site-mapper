@@ -1,0 +1,15 @@
+{
+	"ImportPath": "github.com/jlrickert/gollar",
+	"GoVersion": "go1.10",
+	"GodepVersion": "v80",
+	"Deps": [
+		{
+			"ImportPath": "golang.org/x/net/html",
+			"Rev": "c4299a1a0d8524c11563db160fbf9bddbceadb21"
+		},
+		{
+			"ImportPath": "golang.org/x/net/html/atom",
+			"Rev": "c4299a1a0d8524c11563db160fbf9bddbceadb21"
+		}
+	]
+}
