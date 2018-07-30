@@ -9,7 +9,7 @@ func main() {
 	seedUrls := os.Args[1:]
 
 	crawler := NewCrawler()
-	chUrls := make(chan *Url)
+	chUrls := make(chan Url)
 	chFinished := make(chan bool)
 	urls := []Url{}
 
@@ -17,7 +17,7 @@ func main() {
 		go func(url string) {
 			urls := crawler.RecursiveCrawl(url)
 			for _, v := range urls {
-				chUrls <- &v
+				chUrls <- v
 			}
 			chFinished <- true
 		}(url)
@@ -26,7 +26,7 @@ func main() {
 	for running := len(seedUrls); running != 0; {
 		select {
 		case url := <-chUrls:
-			urls = append(urls, *url)
+			urls = append(urls, url)
 		case <-chFinished:
 			running--
 		}
@@ -36,6 +36,7 @@ func main() {
 
 	for i := range urls {
 		url := urls[i]
-		fmt.Println(" - ", url.Path, url.Href)
+		fmt.Println(" -", url.Path, url.Href)
 	}
+	fmt.Println(len(urls), "Unique urls")
 }

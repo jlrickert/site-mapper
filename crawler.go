@@ -41,7 +41,7 @@ func (crawler *Crawler) AddUrl(url *Url) (newVisit bool, newPath bool) {
 	return
 }
 
-func (crawler *Crawler) Crawl(url string) []Url {
+func (crawler *Crawler) Crawl(url string) []*Url {
 	chUrls := make(chan *Url)
 	chFinished := make(chan bool)
 
@@ -57,9 +57,9 @@ func (crawler *Crawler) Crawl(url string) []Url {
 		}
 	}
 
-	keys := make([]Url, len(crawler.urls))
+	keys := make([]*Url, len(crawler.urls))
 	for k := range crawler.urls {
-		keys = append(keys, *k)
+		keys = append(keys, k)
 	}
 	return keys
 }
@@ -85,8 +85,10 @@ func (crawler *Crawler) RecursiveCrawl(url string) []Url {
 	}
 
 	keys := make([]Url, len(crawler.urls))
+	i := 0
 	for k := range crawler.urls {
-		keys = append(keys, *k)
+		keys[i] = *k
+		i++
 	}
 	return keys
 }
