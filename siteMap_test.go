@@ -70,10 +70,7 @@ func TestSiteMapSpec(t *testing.T) {
 
 			nodeD.addLink(nodeC)
 
-			site := NewSiteMap("a")
-			for i := range urls {
-				site.AddUrl(urls[i])
-			}
+			site := NewSiteMapFromSlice("a", urls)
 
 			urlMap := make(map[string]*Node)
 			urlMap["a"] = nodeA

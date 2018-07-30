@@ -90,3 +90,6 @@ func (sm *SiteMap) printNode(node *Node, depth, maxDepth int) {
 		sm.printNode(n, depth+1, maxDepth)
 	}
 }
+
+func (sm *SiteMap) Graph() {
+}

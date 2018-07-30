@@ -1,5 +1,7 @@
 package main
 
+//go:generate go run scripts/genResources.go
+
 import (
 	"fmt"
 	"os"
