@@ -9,99 +9,96 @@ import (
 )
 
 type Crawler struct {
-	ChUniqueUrls chan string
-	ChFinished   chan bool
-
-	running     int
-	runningLock sync.Mutex
-
-	urls     map[string]bool
-	urlsLock sync.Mutex
+	urls        map[*Url]bool
+	visitedUrls map[string]bool
+	urlsLock    sync.Mutex
 }
 
 func NewCrawler() *Crawler {
 	return &Crawler{
-		ChUniqueUrls: make(chan string),
-		ChFinished:   make(chan bool),
-		running:      0,
-		runningLock:  sync.Mutex{},
-		urls:         make(map[string]bool),
-		urlsLock:     sync.Mutex{},
+		visitedUrls: make(map[string]bool),
+		urls:        make(map[*Url]bool),
+		urlsLock:    sync.Mutex{},
 	}
 }
 
-func (crawler *Crawler) AddUrl(url string) bool {
+func (crawler *Crawler) AddUrl(url *Url) (newVisit bool, newPath bool) {
 	crawler.urlsLock.Lock()
 	defer crawler.urlsLock.Unlock()
+
+	newVisit = false
+	newPath = false
+
+	if !crawler.visitedUrls[url.Href] {
+		crawler.visitedUrls[url.Href] = true
+		newVisit = true
+	}
+
 	if !crawler.urls[url] {
 		crawler.urls[url] = true
-		crawler.ChUniqueUrls <- url
-		return true
+		newPath = true
 	}
-	return false
+	return
 }
 
-func (crawler *Crawler) updateRunning(fn func(n int) int) int {
-	crawler.runningLock.Lock()
-	count := fn(crawler.running)
-	crawler.running = count
-	crawler.runningLock.Unlock()
-	return count
-}
-
-func (crawler *Crawler) Crawl(url string) {
-	crawler.updateRunning(add1)
-
-	chUrls := make(chan string)
+func (crawler *Crawler) Crawl(url string) []Url {
+	chUrls := make(chan *Url)
 	chFinished := make(chan bool)
-	go crawler.crawlUrl("", url, chUrls, chFinished)
 
-	for running := true; running; {
+	rootUrl := NewUrl(url)
+	go crawler.crawlUrl(rootUrl, chUrls, chFinished)
+
+	for running := 1; running != 0; {
 		select {
 		case u := <-chUrls:
 			crawler.AddUrl(u)
 		case <-chFinished:
-			if crawler.updateRunning(sub1) == 0 {
-				crawler.ChFinished <- true
-			}
-			running = false
+			running--
 		}
 	}
+
+	keys := make([]Url, len(crawler.urls))
+	for k := range crawler.urls {
+		keys = append(keys, *k)
+	}
+	return keys
 }
 
-func (crawler *Crawler) RecursiveCrawl(url string) {
-	crawler.updateRunning(add1)
-
-	chUrls := make(chan string)
+func (crawler *Crawler) RecursiveCrawl(url string) []Url {
+	chUrls := make(chan *Url)
 	chFin := make(chan bool)
 
-	go crawler.crawlUrl("", url, chUrls, chFin)
+	rootUrl := NewUrl(url)
+	go crawler.crawlUrl(rootUrl, chUrls, chFin)
 
-	go func() {
-		for running := true; running; {
-			select {
-			case u := <-chUrls:
-				if crawler.AddUrl(u) && strings.Contains(u, url) {
-					crawler.updateRunning(add1)
-					go crawler.crawlUrl(url, u, chUrls, chFin)
-				}
-			case <-chFin:
-				if crawler.updateRunning(sub1) == 0 {
-					crawler.ChFinished <- true
-					running = false
-				}
+	for running := 1; running != 0; {
+		select {
+		case u := <-chUrls:
+			newVisit, _ := crawler.AddUrl(u)
+			if newVisit && strings.Contains(u.Href, rootUrl.Href) {
+				running++
+				go crawler.crawlUrl(u, chUrls, chFin)
 			}
+		case <-chFin:
+			running--
 		}
-	}()
+	}
+
+	keys := make([]Url, len(crawler.urls))
+	for k := range crawler.urls {
+		keys = append(keys, *k)
+	}
+	return keys
 }
 
-func (crawler *Crawler) crawlUrl(rootUrl, url string, chUrl chan string, chFinished chan bool) {
-	resp, err := http.Get(url)
+func (crawler *Crawler) crawlUrl(url *Url, chUrl chan *Url, chFinished chan bool) {
+	resp, err := http.Get(url.Href)
 	if err != nil {
-		fmt.Println("ERROR: Failed to crawl \"" + url + "\"")
+		fmt.Println("ERROR: Failed to crawl \"" + url.Href + "\"")
 		chFinished <- true
 		return
 	}
+
 	body := resp.Body
 	defer body.Close()
 
@@ -122,14 +119,14 @@ func (crawler *Crawler) crawlUrl(rootUrl, url string, chUrl chan string, chFinis
 				continue
 			}
 
-			ok, url := getHref(token)
+			ok, href := getHref(token)
 			if !ok {
 				continue
 			}
 
-			hasProto := strings.Index(url, "http") == 0
+			hasProto := strings.Index(href, "http") == 0
 			if hasProto {
-				chUrl <- url
+				chUrl <- url.Link(href)
 			}
 		}
 	}

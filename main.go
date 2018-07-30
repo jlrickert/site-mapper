@@ -9,18 +9,33 @@ func main() {
 	seedUrls := os.Args[1:]
 
 	crawler := NewCrawler()
+	chUrls := make(chan *Url)
+	chFinished := make(chan bool)
+	urls := []Url{}
+
 	for _, url := range seedUrls {
-		go crawler.RecursiveCrawl(url)
+		go func(url string) {
+			urls := crawler.RecursiveCrawl(url)
+			for _, v := range urls {
+				chUrls <- &v
+			}
+			chFinished <- true
+		}(url)
+	}
+
+	for running := len(seedUrls); running != 0; {
+		select {
+		case url := <-chUrls:
+			urls = append(urls, *url)
+		case <-chFinished:
+			running--
+		}
 	}
 
 	fmt.Println("Unique Urls: ")
 
-	for running := true; running; {
-		select {
-		case url := <-crawler.ChUniqueUrls:
-			fmt.Println(" - " + url)
-		case <-crawler.ChFinished:
-			running = false
-		}
+	for i := range urls {
+		url := urls[i]
+		fmt.Println(" - ", url.Path, url.Href)
 	}
 }
