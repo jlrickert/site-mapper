@@ -44,6 +44,14 @@ func NewSiteMap(rootUrl string) *SiteMap {
 	return &site
 }
 
+func NewSiteMapFromSlice(rootUrl string, urls []*Url) (site *SiteMap) {
+	site = NewSiteMap(rootUrl)
+	for i := range urls {
+		site.AddUrl(urls[i])
+	}
+	return
+}
+
 func (sm *SiteMap) AddUrl(url *Url) {
 	urls := url.Path[:]
 	urls = append(urls, url.Href)
@@ -64,6 +72,21 @@ func (sm *SiteMap) GetNode(url string) *Node {
 	return sm.nodes[url]
 }
 
-func (sm *SiteMap) Display() {
-	fmt.Println("rawr")
+func (sm *SiteMap) Display(maxDepth int) {
+	fmt.Println(sm.Href)
+	sm.printNode(sm.Root, 1, maxDepth)
+}
+
+func (sm *SiteMap) printNode(node *Node, depth, maxDepth int) {
+	if depth > maxDepth {
+		return
+	}
+	for href := range node.links {
+		for i := 0; i < depth; i++ {
+			fmt.Print("    ")
+		}
+		n := node.links[href]
+		fmt.Println(n.href)
+		sm.printNode(n, depth+1, maxDepth)
+	}
 }

@@ -64,7 +64,7 @@ func (crawler *Crawler) Crawl(url string) []*Url {
 	return keys
 }
 
-func (crawler *Crawler) RecursiveCrawl(url string) []Url {
+func (crawler *Crawler) RecursiveCrawl(url string) []*Url {
 	chUrls := make(chan *Url)
 	chFin := make(chan bool)
 
@@ -84,10 +84,10 @@ func (crawler *Crawler) RecursiveCrawl(url string) []Url {
 		}
 	}
 
-	keys := make([]Url, len(crawler.urls))
+	keys := make([]*Url, len(crawler.urls))
 	i := 0
 	for k := range crawler.urls {
-		keys[i] = *k
+		keys[i] = k
 		i++
 	}
 	return keys

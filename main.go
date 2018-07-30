@@ -8,25 +8,26 @@ import (
 func main() {
 	seedUrls := os.Args[1:]
 
-	crawler := NewCrawler()
 	chUrls := make(chan Url)
 	chFinished := make(chan bool)
-	urls := []Url{}
+	uniqueUrls := []Url{}
+	urls := make([][]*Url, len(seedUrls))
 
-	for _, url := range seedUrls {
-		go func(url string) {
-			urls := crawler.RecursiveCrawl(url)
-			for _, v := range urls {
-				chUrls <- v
+	for i, url := range seedUrls {
+		go func(url string, index int) {
+			crawler := NewCrawler()
+			urls[index] = crawler.RecursiveCrawl(url)
+			for _, v := range urls[index] {
+				chUrls <- *v
 			}
 			chFinished <- true
-		}(url)
+		}(url, i)
 	}
 
 	for running := len(seedUrls); running != 0; {
 		select {
 		case url := <-chUrls:
-			urls = append(urls, url)
+			uniqueUrls = append(uniqueUrls, url)
 		case <-chFinished:
 			running--
 		}
@@ -34,9 +35,17 @@ func main() {
 
 	fmt.Println("Unique Urls: ")
 
-	for i := range urls {
-		url := urls[i]
+	for i := range uniqueUrls {
+		url := uniqueUrls[i]
 		fmt.Println(" -", url.Path, url.Href)
 	}
-	fmt.Println(len(urls), "Unique urls")
+	fmt.Println(len(uniqueUrls), "Unique urls")
+
+	fmt.Println("----------------------------------------")
+	fmt.Println("Printing Site map")
+	fmt.Println("----------------------------------------")
+	for i := range urls {
+		site := NewSiteMapFromSlice(seedUrls[i], urls[i])
+		site.Display(3)
+	}
 }
