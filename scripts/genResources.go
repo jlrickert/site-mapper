@@ -1,33 +1,39 @@
 package main
 
 import (
-	"bytes"
 	"io"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
 func main() {
-	fs, _ := ioutil.ReadDir("./resources")
+	fs, _ := ioutil.ReadDir("resources")
 	out, _ := os.Create("resources.go")
 	out.Write([]byte("package main\n\nconst (\n"))
 	for _, f := range fs {
-		out.Write([]byte("\t" + fixFileName(f.Name()) + " = \""))
-		f, err := os.Open("./resources/" + f.Name())
+		rawContent, err := readFile(f.Name())
 		if err != nil {
 			panic(err)
 		}
 
-		content := []byte{}
-		_, _ = f.Read(content)
-
-		r := encode(f)
-		io.Copy(out, r)
-
-		out.Write([]byte("\"\n"))
+		writeNewItem(out, fixFileName(f.Name()), rawContent)
 	}
 	out.Write([]byte((")\n")))
+}
+
+func readFile(filename string) ([]byte, error) {
+	fullPath, err := filepath.Abs(filepath.Join("resources", filename))
+	if err != nil {
+		return []byte{}, err
+	}
+	return ioutil.ReadFile(fullPath)
+}
+
+func writeNewItem(out io.Writer, varName string, b []byte) (int, error) {
+	contents := encode(string(b))
+	return out.Write([]byte("\t" + varName + ` = "` + contents + "\"\n"))
 }
 
 func fixFileName(filename string) string {
@@ -40,19 +46,9 @@ func fixFileName(filename string) string {
 	return strings.Join(parts, "")
 }
 
-func encode(r io.Reader) io.Reader {
-	buffer := make([]byte, 256)
-	content := bytes.NewBuffer([]byte{})
-	for {
-		n, _ := r.Read(buffer)
-		if n <= 0 {
-			break
-		}
-		encode := string(buffer)
-		encode = strings.Replace(encode, "\\", "\\\\", -1)
-		encode = strings.Replace(encode, "\"", "\\\"", -1)
-		encode = strings.Replace(encode, "\n", "\\n", -1)
-		content.Write([]byte(encode))
-	}
-	return content
+func encode(str string) string {
+	str = strings.Replace(str, `\`, `\\`, -1)
+	str = strings.Replace(str, `"`, `\"`, -1)
+	str = strings.Replace(str, "\n", `\n`, -1)
+	return str
 }

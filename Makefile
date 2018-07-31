@@ -1,4 +1,5 @@
-SOURCES = crawler.go main.go resources.go siteMap.go url.go util.go
+SOURCES = crawler.go graph.go main.go resources.go siteMap.go url.go util.go
+RESOURCES = $(wildcard resources/*)
 
 all: build
 
@@ -10,7 +11,7 @@ build: site-mapper
 site-mapper: $(SOURCES)
 	go build
 
-resources.go: scripts/genResources.go resources/.*
+resources.go: scripts/genResources.go $(RESOURCES)
 	go generate
 
 %:

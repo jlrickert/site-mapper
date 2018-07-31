@@ -49,5 +49,6 @@ func main() {
 	for i := range urls {
 		site := NewSiteMapFromSlice(seedUrls[i], urls[i])
 		site.Display(3)
+		site.Graph()
 	}
 }
