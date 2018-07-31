@@ -92,5 +92,5 @@ func (sm *SiteMap) printNode(node *Node, depth, maxDepth int) {
 }
 
 func (sm *SiteMap) Graph() {
-	GenerateGraphIndex(sm)
+	// GenerateGraphIndex(sm)
 }

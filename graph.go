@@ -1,31 +1,34 @@
 package main
 
 import (
+	"io"
 	"log"
-	"os"
 	"text/template"
 )
 
-type GraphIndex struct {
+type GraphHtml struct {
 	Title   string
-	Css     []string
+	Styles  []string
 	Scripts []string
 }
 
-func NewGraphIndex(url string) *GraphIndex {
-	return &GraphIndex{
+type Javascript struct {
+}
+
+func NewGraphHtml(url string) *GraphHtml {
+	return &GraphHtml{
 		Title:   url + " Sitemap Graph",
-		Css:     []string{visMinCss},
+		Styles:  []string{visMinCss},
 		Scripts: []string{visMinJs},
 	}
 }
 
-func GenerateGraphIndex(site *SiteMap) {
-	graph := NewGraphIndex(site.Href)
+func WriteGraphIndex(out io.Writer, site *SiteMap) {
 	t := template.Must(template.New("graph").Parse(graphHTML))
-	err := t.Execute(os.Stdout, graph)
+
+	graph := NewGraphHtml(site.Href)
+	err := t.Execute(out, graph)
 	if err != nil {
 		log.Println("executing template:", err)
 	}
-	return
 }

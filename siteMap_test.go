@@ -52,7 +52,7 @@ func TestSiteMapSpec(t *testing.T) {
 			NewUrlFromSlice([]string{"a", "b", "c", "c"}),
 			NewUrlFromSlice([]string{"a", "b", "d", "c"}),
 		}
-		_ = urls
+
 		Convey("should correctly build nodes", func() {
 			nodeA := NewNode("a")
 			nodeB := NewNode("b")
