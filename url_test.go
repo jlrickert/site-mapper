@@ -7,14 +7,18 @@ import (
 
 func TestUrlSpec(t *testing.T) {
 	Convey("Given a url path", t, func() {
-		UrlPath := NewUrlPath("google.com", "github.com")
+		urlPath := []UrlPath{
+			NewUrlPath("https://google.com", "https://github.com"),
+			NewUrlPath("https://google.com", "https://github.com", "/users"),
+		}
 		Convey("should have an href", func() {
-			So(UrlPath.Href(), ShouldEqual, "github.com")
+			So(urlPath[0].Href(), ShouldEqual, "https://github.com")
+			So(urlPath[1].Href(), ShouldEqual, "https://google.com/users")
 		})
 	})
 
 	Convey("Given a path of urls without a cycle", t, func() {
-		urls := []string{"google.com", "github.com", "github.com/user"}
+		urls := []string{"https://google.com", "https://github.com", "https://github.com/user"}
 		Convey("should correctly create the path", func() {
 			path1 := NewUrlPath()
 
@@ -33,7 +37,7 @@ func TestUrlSpec(t *testing.T) {
 	})
 
 	Convey("Given a path of urls that contain a cycle", t, func() {
-		urls := []string{"google.com", "github.com/user", "google.com", "google.com"}
+		urls := []string{"https://google.com", "https://github.com/user", "https://google.com", "https://google.com"}
 		path := NewUrlPath()
 		So(path.AddLink(urls[0]), ShouldEqual, 0)
 		So(path.AddLink(urls[1]), ShouldEqual, 0)

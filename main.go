@@ -5,10 +5,11 @@ package main
 import (
 	"fmt"
 	"os"
-	// "strconv"
+	"strconv"
+	"time"
 )
 
-func FindUniqueLinks(url string) int {
+func FindUniqueLinks(url string, options CrawlerOptions) int {
 	chUrls := make(chan string)
 	urlCount := 0
 
@@ -19,7 +20,7 @@ func FindUniqueLinks(url string) int {
 		}
 	}()
 
-	RecursiveCrawl(url, 1000, func(url string) {
+	RecursiveCrawl(url, options, func(url string) {
 		fmt.Println(" - " + url)
 		chUrls <- url
 	})
@@ -27,21 +28,34 @@ func FindUniqueLinks(url string) int {
 	return urlCount
 }
 
-func GenerateSiteMapDotFile(url string) {
+func GenerateSiteMapDotFile(url string, options CrawlerOptions) {
 	file, err := os.Create("out.dot")
 	defer file.Close()
 	if err != nil {
 		panic(err)
 	}
-	site := IndexWebsite(url, 1000)
+	site := IndexWebsite(url, options)
 	site.GenerateDOT(file)
 }
 
-func main() {
+func FindUniqueLinksCommand() {
 	seedUrl := os.Args[1]
+	urlCount := FindUniqueLinks(seedUrl, CrawlerOptions{
+		maxCrawlers: 100,
+		Throttle:    0 * time.Millisecond,
+	})
+	fmt.Println("Unique Url count: " + strconv.Itoa(urlCount))
+}
 
-	GenerateSiteMapDotFile(seedUrl)
+func GenerateSiteMapDotFileCommand() {
+	seedUrl := os.Args[1]
+	GenerateSiteMapDotFile(seedUrl, CrawlerOptions{
+		maxCrawlers: 100,
+		Throttle:    0 * time.Millisecond,
+	})
+}
 
-	// urlCount := FindUniqueLinks(seedUrl)
-	// fmt.Println("Unique Url count: " + strconv.Itoa(urlCount))
+func main() {
+	GenerateSiteMapDotFileCommand()
+	// FindUniqueLinksCommand()
 }

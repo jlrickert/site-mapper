@@ -53,17 +53,20 @@ func NewSiteMapFromUrlPaths(url string, paths []UrlPath) *SiteMap {
 	return site
 }
 
-func (sm *SiteMap) AddUrlPath(path UrlPath) {
+func (sm *SiteMap) AddUrlPath(path UrlPath) bool {
+	addedNode := false
 	lastCur := sm.Root
 	for i := 0; i < len(path); i++ {
 		cur := sm.nodes[path[i]]
 		if cur == nil {
 			cur = NewNode(path[i])
+			addedNode = true
 			sm.nodes[path[i]] = cur
 		}
 		lastCur.addLink(cur)
 		lastCur = cur
 	}
+	return addedNode
 }
 
 func (sm *SiteMap) GetNode(url string) *Node {
