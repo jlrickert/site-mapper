@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	. "github.com/smartystreets/goconvey/convey"
 	"testing"
 )
@@ -41,16 +43,17 @@ func TestSiteMapSpec(t *testing.T) {
 	})
 
 	Convey("Given a set of urls from a website", t, func() {
-		urls := []*Url{
-			NewUrlFromSlice([]string{"a"}),
-			NewUrlFromSlice([]string{"a", "a"}),
-			NewUrlFromSlice([]string{"a", "b"}),
-			NewUrlFromSlice([]string{"a", "b", "c"}),
-			NewUrlFromSlice([]string{"a", "b", "c", "a"}),
-			NewUrlFromSlice([]string{"a", "b", "d"}),
-			NewUrlFromSlice([]string{"a", "b", "c", "d"}),
-			NewUrlFromSlice([]string{"a", "b", "c", "c"}),
-			NewUrlFromSlice([]string{"a", "b", "d", "c"}),
+		paths := []UrlPath{}
+		_ = paths
+		urls := []UrlPath{
+			NewUrlPath("a", "a"),
+			NewUrlPath("a", "b"),
+			NewUrlPath("a", "b", "c"),
+			NewUrlPath("a", "b", "c", "a"),
+			NewUrlPath("a", "b", "d"),
+			NewUrlPath("a", "b", "c", "d"),
+			NewUrlPath("a", "b", "c", "c"),
+			NewUrlPath("a", "b", "d", "c"),
 		}
 
 		Convey("should correctly build nodes", func() {
@@ -70,13 +73,7 @@ func TestSiteMapSpec(t *testing.T) {
 
 			nodeD.addLink(nodeC)
 
-			site := NewSiteMapFromSlice("a", urls)
-
-			urlMap := make(map[string]*Node)
-			urlMap["a"] = nodeA
-			urlMap["b"] = nodeB
-			urlMap["c"] = nodeC
-			urlMap["d"] = nodeD
+			site := NewSiteMapFromUrlPaths("a", urls)
 
 			/////////
 			// Node A
@@ -86,11 +83,13 @@ func TestSiteMapSpec(t *testing.T) {
 			So(actualNodeA.links["b"].href, ShouldEqual, nodeB.href)
 			So(actualNodeA.links["c"], ShouldEqual, nil)
 			So(actualNodeA.links["d"], ShouldEqual, nil)
+			So(len(actualNodeA.links), ShouldEqual, 2)
 
 			So(actualNodeA.linkedFrom["a"].href, ShouldEqual, nodeA.href)
 			So(actualNodeA.linkedFrom["b"], ShouldEqual, nil)
 			So(actualNodeA.linkedFrom["c"].href, ShouldEqual, nodeC.href)
 			So(actualNodeA.linkedFrom["d"], ShouldEqual, nil)
+			So(len(actualNodeA.linkedFrom), ShouldEqual, 2)
 
 			/////////
 			// Node B
@@ -100,11 +99,13 @@ func TestSiteMapSpec(t *testing.T) {
 			So(actualNodeB.links["b"], ShouldEqual, nil)
 			So(actualNodeB.links["c"].href, ShouldEqual, nodeC.href)
 			So(actualNodeB.links["d"].href, ShouldEqual, nodeD.href)
+			So(len(actualNodeB.links), ShouldEqual, 2)
 
 			So(actualNodeB.linkedFrom["a"].href, ShouldEqual, nodeA.href)
 			So(actualNodeB.linkedFrom["b"], ShouldEqual, nil)
 			So(actualNodeB.linkedFrom["c"], ShouldEqual, nil)
 			So(actualNodeB.linkedFrom["d"], ShouldEqual, nil)
+			So(len(actualNodeB.linkedFrom), ShouldEqual, 1)
 
 			/////////
 			// Node C
@@ -114,11 +115,13 @@ func TestSiteMapSpec(t *testing.T) {
 			So(actualNodeC.links["b"], ShouldEqual, nil)
 			So(actualNodeC.links["c"].href, ShouldEqual, nodeC.href)
 			So(actualNodeC.links["d"].href, ShouldEqual, nodeD.href)
+			So(len(actualNodeC.links), ShouldEqual, 3)
 
 			So(actualNodeC.linkedFrom["a"], ShouldEqual, nil)
 			So(actualNodeC.linkedFrom["b"].href, ShouldEqual, nodeB.href)
 			So(actualNodeC.linkedFrom["c"].href, ShouldEqual, nodeC.href)
 			So(actualNodeC.linkedFrom["d"].href, ShouldEqual, nodeD.href)
+			So(len(actualNodeC.linkedFrom), ShouldEqual, 3)
 
 			/////////
 			// Node D
@@ -128,11 +131,40 @@ func TestSiteMapSpec(t *testing.T) {
 			So(actualNodeD.links["b"], ShouldEqual, nil)
 			So(actualNodeD.links["c"].href, ShouldEqual, nodeC.href)
 			So(actualNodeD.links["d"], ShouldEqual, nil)
+			So(len(actualNodeD.links), ShouldEqual, 1)
 
 			So(actualNodeD.linkedFrom["a"], ShouldEqual, nil)
 			So(actualNodeD.linkedFrom["b"].href, ShouldEqual, nodeB.href)
 			So(actualNodeD.linkedFrom["c"].href, ShouldEqual, nodeC.href)
 			So(actualNodeD.linkedFrom["d"], ShouldEqual, nil)
+			So(len(actualNodeD.linkedFrom), ShouldEqual, 2)
+		})
+	})
+
+	Convey("Given a valid sitemap", t, func() {
+		Convey("should be able translate to DOT format", func() {
+			site := NewSiteMapFromUrlPaths("google.com", []UrlPath{
+				NewUrlPath("google.com"),
+				NewUrlPath("duckduckgo.com", "google.com"),
+				NewUrlPath("github.com", "github.com/user"),
+			})
+			expected := `digraph graphname {
+    "google.com" -> "google.com";
+    "google.com" -> "duckduckgo.com";
+    "google.com" -> "github.com";
+    "duckduckgo.com" -> "google.com";
+    "github.com" -> "github.com/user";
+}`
+
+			var contents bytes.Buffer
+			w := bufio.NewWriter(&contents)
+			_, err := site.GenerateDOT(w)
+			So(err, ShouldBeNil)
+
+			err = w.Flush()
+			So(err, ShouldBeNil)
+
+			So(string(contents.Bytes()), ShouldEqual, expected)
 		})
 	})
 }

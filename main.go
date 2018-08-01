@@ -5,50 +5,50 @@ package main
 import (
 	"fmt"
 	"os"
+	"strconv"
 )
 
-func main() {
-	seedUrls := os.Args[1:]
+func FindUniqueLinks(url string) int {
+	chUrls := make(chan string)
+	urlCount := 0
 
-	chUrls := make(chan Url)
-	chFinished := make(chan bool)
-	uniqueUrls := []Url{}
-	urls := make([][]*Url, len(seedUrls))
-
-	for i, url := range seedUrls {
-		go func(url string, index int) {
-			crawler := NewCrawler()
-			urls[index] = crawler.RecursiveCrawl(url)
-			for _, v := range urls[index] {
-				chUrls <- *v
-			}
-			chFinished <- true
-		}(url, i)
-	}
-
-	for running := len(seedUrls); running != 0; {
-		select {
-		case url := <-chUrls:
-			uniqueUrls = append(uniqueUrls, url)
-		case <-chFinished:
-			running--
+	go func() {
+		for {
+			<-chUrls
+			urlCount += 1
 		}
-	}
+	}()
 
-	fmt.Println("Unique Urls: ")
+	RecursiveCrawl(url, func(url string) {
+		fmt.Println(" - " + url)
+		chUrls <- url
+	})
+	close(chUrls)
+	return urlCount
+}
 
-	for i := range uniqueUrls {
-		url := uniqueUrls[i]
-		fmt.Println(" -", url.Path, url.Href)
-	}
-	fmt.Println(len(uniqueUrls), "Unique urls")
+func main() {
+	seedUrl := os.Args[1]
 
-	fmt.Println("----------------------------------------")
-	fmt.Println("Printing Site map")
-	fmt.Println("----------------------------------------")
-	for i := range urls {
-		site := NewSiteMapFromSlice(seedUrls[i], urls[i])
-		site.Display(3)
-		site.Graph()
-	}
+	urlCount := FindUniqueLinks(seedUrl)
+	fmt.Println("Unique Url count: " + strconv.Itoa(urlCount))
+
+	// uniquUrls := make(map[string]bool)
+	// for i := range urlPaths {
+	// 	url := urlPaths[i]
+	// 	uniquUrls[url] = true
+	// }
+
+	// fmt.Println(" -", url.Path, url.Href)
+
+	// fmt.Println(len(uniqueUrls), "Unique urls")
+
+	// fmt.Println("----------------------------------------")
+	// fmt.Println("Printing Site map")
+	// fmt.Println("----------------------------------------")
+	// for i := range urls {
+	// 	site := NewSiteMapFromSlice(seedUrls[i], urls[i])
+	// 	site.Display(3)
+	// 	site.Graph()
+	// }
 }
