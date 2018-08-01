@@ -7,10 +7,10 @@ import (
 	"strings"
 )
 
-func RecursiveCrawl(rootUrl string, fn func(url string)) {
+func RecursiveCrawl(rootUrl string, maxCralers int, fn func(url string)) {
 	chUrls := make(chan string)
 	chFinished := make(chan bool)
-	crawlers := make(Semaphore, 10)
+	crawlers := make(Semaphore, maxCralers)
 
 	urls := make(map[string]bool)
 
@@ -83,8 +83,49 @@ func Crawl(url string, fn func(url string)) {
 	}
 }
 
-// func IndexWebsite(url string, maxCrawlers int) *SiteMap {
-// }
+func IndexWebsite(rootUrl string, maxCrawlers int) *SiteMap {
+	site := NewSiteMap(rootUrl)
+
+	chUrls := make(chan UrlPath)
+	chFinished := make(chan bool)
+	crawlers := make(Semaphore, maxCrawlers)
+
+	mkHandler := func(path UrlPath) func(url string) {
+		p := path.Clone()
+		return func(url string) {
+			if p.AddLink(url) < 2 {
+				chUrls <- *p
+			}
+		}
+	}
+
+	rootPath := NewUrlPath(rootUrl)
+
+	running := 1
+	go func() {
+		Crawl(rootUrl, mkHandler(rootPath))
+		chFinished <- true
+	}()
+
+	for running != 0 {
+		select {
+		case path := <-chUrls:
+			site.AddUrlPath(*path.Clone())
+			if strings.Contains(path.Href(), rootUrl) {
+				running++
+				go func() {
+					crawlers.Acquire(1)
+					Crawl(path.Href(), mkHandler(path))
+					crawlers.Signal()
+					chFinished <- true
+				}()
+			}
+		case <-chFinished:
+			running--
+		}
+	}
+	return site
+}
 
 func getHref(t html.Token) (ok bool, href string) {
 	for _, a := range t.Attr {

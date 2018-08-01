@@ -14,7 +14,7 @@ func TestUrlSpec(t *testing.T) {
 	})
 
 	Convey("Given a path of urls without a cycle", t, func() {
-		urls := []string{"google.com", "google.com", "github.com/user"}
+		urls := []string{"google.com", "github.com", "github.com/user"}
 		Convey("should correctly create the path", func() {
 			path1 := NewUrlPath()
 
@@ -33,13 +33,12 @@ func TestUrlSpec(t *testing.T) {
 	})
 
 	Convey("Given a path of urls that contain a cycle", t, func() {
-		urls := []string{"google.com", "google.com", "github.com/user", "google.com", "google.com"}
+		urls := []string{"google.com", "github.com/user", "google.com", "google.com"}
 		path := NewUrlPath()
-		So(path.AddLink(urls[0]), ShouldBeTrue)
-		So(path.AddLink(urls[1]), ShouldBeTrue)
-		So(path.AddLink(urls[2]), ShouldBeTrue)
-		So(path.AddLink(urls[3]), ShouldBeFalse)
-		So(path.AddLink(urls[4]), ShouldBeFalse)
-		So(len(path), ShouldEqual, 3)
+		So(path.AddLink(urls[0]), ShouldEqual, 0)
+		So(path.AddLink(urls[1]), ShouldEqual, 0)
+		So(path.AddLink(urls[2]), ShouldEqual, 1)
+		So(path.AddLink(urls[3]), ShouldEqual, 2)
+		So(len(path), ShouldEqual, 4)
 	})
 }

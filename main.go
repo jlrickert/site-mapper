@@ -5,7 +5,7 @@ package main
 import (
 	"fmt"
 	"os"
-	"strconv"
+	// "strconv"
 )
 
 func FindUniqueLinks(url string) int {
@@ -19,7 +19,7 @@ func FindUniqueLinks(url string) int {
 		}
 	}()
 
-	RecursiveCrawl(url, func(url string) {
+	RecursiveCrawl(url, 1000, func(url string) {
 		fmt.Println(" - " + url)
 		chUrls <- url
 	})
@@ -27,28 +27,21 @@ func FindUniqueLinks(url string) int {
 	return urlCount
 }
 
+func GenerateSiteMapDotFile(url string) {
+	file, err := os.Create("out.dot")
+	defer file.Close()
+	if err != nil {
+		panic(err)
+	}
+	site := IndexWebsite(url, 1000)
+	site.GenerateDOT(file)
+}
+
 func main() {
 	seedUrl := os.Args[1]
 
-	urlCount := FindUniqueLinks(seedUrl)
-	fmt.Println("Unique Url count: " + strconv.Itoa(urlCount))
+	GenerateSiteMapDotFile(seedUrl)
 
-	// uniquUrls := make(map[string]bool)
-	// for i := range urlPaths {
-	// 	url := urlPaths[i]
-	// 	uniquUrls[url] = true
-	// }
-
-	// fmt.Println(" -", url.Path, url.Href)
-
-	// fmt.Println(len(uniqueUrls), "Unique urls")
-
-	// fmt.Println("----------------------------------------")
-	// fmt.Println("Printing Site map")
-	// fmt.Println("----------------------------------------")
-	// for i := range urls {
-	// 	site := NewSiteMapFromSlice(seedUrls[i], urls[i])
-	// 	site.Display(3)
-	// 	site.Graph()
-	// }
+	// urlCount := FindUniqueLinks(seedUrl)
+	// fmt.Println("Unique Url count: " + strconv.Itoa(urlCount))
 }
