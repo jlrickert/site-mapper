@@ -1,7 +1,7 @@
 package main
 
 import (
-	// "bytes"
+	"bytes"
 	. "github.com/smartystreets/goconvey/convey"
 	"testing"
 )
@@ -20,20 +20,31 @@ func TestGraphSpec(t *testing.T) {
 		// 	NewUrlFromSlice([]string{"google.com", "google.com/images", "google.com"}),
 		// }
 		// site := NewSiteMapFromSlice("google.com", urls)
+		site := NewSiteMapFromUrlPaths("https://google.com", []UrlPath{
+			UrlPath{"https://google.com", "https://google.com"},
+			UrlPath{"https://google.com", "https://google.com/maps"},
+			UrlPath{"https://google.com", "https://google.com/maps", "https://google.com"},
+			UrlPath{"https://google.com", "https://google.com/email"},
+			UrlPath{"https://google.com", "https://google.com/email", "https://google.com/email"},
+			UrlPath{"https://google.com", "https://google.com/email", "https://google.com"},
+			UrlPath{"https://google.com", "https://google.com/images"},
+			UrlPath{"https://google.com", "https://google.com/images", "https://google.com/images"},
+			UrlPath{"https://google.com", "https://google.com/images", "https://google.com"},
+		})
 
-		// Convey("should generate a valid standalone html file", func() {
-		// 	file := bytes.NewBuffer([]byte{})
+		Convey("should generate a valid standalone html file", func() {
+			file := bytes.NewBuffer([]byte{})
 
-		// 	WriteGraphIndex(file, site)
+			WriteGraphIndex(file, site)
 
-		// 	contents := string(file.Bytes())
-		// 	So(contents, ShouldContainSubstring, "google.com")
-		// 	So(contents, ShouldContainSubstring, "<html")
-		// 	So(contents, ShouldContainSubstring, "</html>")
-		// 	So(contents, ShouldContainSubstring, "<head")
-		// 	So(contents, ShouldContainSubstring, "</head>")
-		// 	So(contents, ShouldContainSubstring, "<body")
-		// 	So(contents, ShouldContainSubstring, "</body>")
-		// })
+			contents := string(file.Bytes())
+			So(contents, ShouldContainSubstring, "google.com")
+			So(contents, ShouldContainSubstring, "<html")
+			So(contents, ShouldContainSubstring, "</html>")
+			So(contents, ShouldContainSubstring, "<head")
+			So(contents, ShouldContainSubstring, "</head>")
+			So(contents, ShouldContainSubstring, "<body")
+			So(contents, ShouldContainSubstring, "</body>")
+		})
 	})
 }

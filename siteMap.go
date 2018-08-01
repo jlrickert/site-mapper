@@ -127,3 +127,7 @@ func (sm *SiteMap) GenerateDOT(w io.Writer) (int, error) {
 	}
 	return count, err
 }
+
+func GenerateGraph(w io.Writer) (int, error) {
+	return w.Write([]byte{})
+}

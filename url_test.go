@@ -13,7 +13,7 @@ func TestUrlSpec(t *testing.T) {
 		}
 		Convey("should have an href", func() {
 			So(urlPath[0].Href(), ShouldEqual, "https://github.com")
-			So(urlPath[1].Href(), ShouldEqual, "https://google.com/users")
+			So(urlPath[1].Href(), ShouldEqual, "https://github.com/users")
 		})
 	})
 
