@@ -9,10 +9,10 @@ run: build
 build: site-mapper
 
 site-mapper: $(SOURCES)
-	go build
+	godep go build
 
 resources.go: scripts/genResources.go $(RESOURCES)
-	go generate
+	godep go generate
 
 %:
 	@true

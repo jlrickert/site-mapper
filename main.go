@@ -60,16 +60,16 @@ func FindUniqueLinksCommand() {
 func GenerateSiteMapDotFileCommand() {
 	seedUrl := os.Args[1]
 	GenerateSiteMapDotFile(seedUrl, CrawlerOptions{
-		maxCrawlers: 100,
-		Throttle:    0 * time.Millisecond,
+		maxCrawlers: 1,
+		Throttle:    1000 * time.Millisecond,
 	})
 }
 
 func GenerateSiteMapIndexCommand() {
 	seedUrl := os.Args[1]
 	GenerateSiteMapIndex(seedUrl, CrawlerOptions{
-		maxCrawlers: 1000,
-		Throttle:    0 * time.Millisecond,
+		maxCrawlers: 1,
+		Throttle:    1000 * time.Millisecond,
 	})
 }
 

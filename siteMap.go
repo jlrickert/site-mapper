@@ -32,7 +32,6 @@ func (this *Node) addLink(that *Node) {
 
 func NewSiteMap(rootUrl string) *SiteMap {
 	rootNode := NewNode(rootUrl)
-
 	nodes := make(map[string]*Node)
 	nodes[rootUrl] = rootNode
 

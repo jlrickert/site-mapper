@@ -42,6 +42,18 @@ func TestSiteMapSpec(t *testing.T) {
 		})
 	})
 
+	Convey("Given valid website url", t, func() {
+		url := "https://google.com"
+		Convey("Should correctly add paths", func() {
+			site := NewSiteMap(url)
+			So(site.AddUrlPath(NewUrlPath(url, url)), ShouldBeFalse)
+			So(site.AddUrlPath(NewUrlPath(url, "https://github.com")), ShouldBeTrue)
+			So(site.AddUrlPath(NewUrlPath(url, "https://github.com")), ShouldBeFalse)
+			So(site.AddUrlPath(NewUrlPath(url, "https://github.com", url)), ShouldBeFalse)
+			So(site.AddUrlPath(NewUrlPath(url, url)), ShouldBeFalse)
+		})
+	})
+
 	Convey("Given a set of urls from a website", t, func() {
 		paths := []UrlPath{}
 		_ = paths

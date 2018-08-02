@@ -82,15 +82,19 @@ func Crawl(url string, fn func(url string)) error {
 	}
 
 	contentType := resp.Header["Content-Type"]
-	if contentType != nil {
-		validTypes := make(map[string]bool)
-		validTypes["text/html"] = true
+	if contentType != nil || len(contentType) != 0 {
+		validTypes := []string{
+			"text/html",
+		}
 		ok := false
-		for i := range contentType {
-			ct := contentType[i]
-			if validTypes[ct] {
-				ok = true
-				break
+		for cti := range contentType {
+			ct := contentType[cti]
+			for vti := range validTypes {
+				vt := validTypes[vti]
+				if strings.Contains(ct, vt) {
+					ok = true
+					break
+				}
 			}
 		}
 		if !ok {
@@ -132,8 +136,6 @@ func Crawl(url string, fn func(url string)) error {
 func IndexWebsite(rootUrl string, options CrawlerOptions) *SiteMap {
 	log.Println("Indexing " + rootUrl)
 	site := NewSiteMap(rootUrl)
-	cache := make(map[string]bool)
-
 	chUrls := make(chan UrlPath)
 	chFinished := make(chan bool)
 
@@ -148,7 +150,10 @@ func IndexWebsite(rootUrl string, options CrawlerOptions) *SiteMap {
 		return func(url string) {
 			p := path.Clone()
 			hits := p.AddLink(url)
-			if hits < 1 {
+			if p.Href() == "" {
+				return
+			}
+			if hits <= 1 {
 				chUrls <- *p
 			}
 		}
@@ -173,10 +178,13 @@ func IndexWebsite(rootUrl string, options CrawlerOptions) *SiteMap {
 	for running != 0 {
 		select {
 		case path := <-chUrls:
-			if site.AddUrlPath(*path.Clone()) && strings.Contains(path.Href(), rootUrl) && !cache[path.Href()] {
-				cache[path.Href()] = true
+			url := path.Href()
+			addedToSiteMap := site.AddUrlPath(*path.Clone())
+			partOfDomain := strings.Index(url, rootUrl) == 0
+			fragment := strings.Index(url, "#") >= 0
+			if addedToSiteMap && partOfDomain && !fragment {
 				running++
-				log.Println("New crawlers queued", running)
+				log.Println("New crawler queued for", url)
 				go func() {
 					if options.maxCrawlers > 0 {
 						crawlers.Acquire(1)
@@ -184,7 +192,7 @@ func IndexWebsite(rootUrl string, options CrawlerOptions) *SiteMap {
 					if options.Throttle > 0 {
 						<-rateLimit
 					}
-					err := Crawl(path.Href(), mkHandler(path))
+					err := Crawl(url, mkHandler(path))
 					if err != nil {
 						fmt.Println(err)
 					}
@@ -196,7 +204,7 @@ func IndexWebsite(rootUrl string, options CrawlerOptions) *SiteMap {
 			}
 		case <-chFinished:
 			running--
-			log.Println("Crawlers finished", running)
+			log.Println("Crawler finished.", running, "remaining")
 		}
 	}
 	return site

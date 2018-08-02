@@ -38,11 +38,13 @@ func TestUrlSpec(t *testing.T) {
 
 	Convey("Given a path of urls that contain a cycle", t, func() {
 		urls := []string{"https://google.com", "https://github.com/user", "https://google.com", "https://google.com"}
-		path := NewUrlPath()
-		So(path.AddLink(urls[0]), ShouldEqual, 0)
-		So(path.AddLink(urls[1]), ShouldEqual, 0)
-		So(path.AddLink(urls[2]), ShouldEqual, 1)
-		So(path.AddLink(urls[3]), ShouldEqual, 2)
-		So(len(path), ShouldEqual, 4)
+		Convey("should correctly detect number of cycle", func() {
+			path := NewUrlPath()
+			So(path.AddLink(urls[0]), ShouldEqual, 0)
+			So(path.AddLink(urls[1]), ShouldEqual, 0)
+			So(path.AddLink(urls[2]), ShouldEqual, 1)
+			So(path.AddLink(urls[3]), ShouldEqual, 2)
+			So(len(path), ShouldEqual, 4)
+		})
 	})
 }

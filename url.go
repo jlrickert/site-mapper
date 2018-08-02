@@ -44,7 +44,7 @@ func (path *UrlPath) AddLink(url string) int {
 		root = strings.TrimRight(root, "/")
 		url = fmt.Sprintf("%s/%s", root, url)
 	}
-
+	url = strings.TrimRight(url, "/")
 	*path = append(*path, url)
 	return hits
 }

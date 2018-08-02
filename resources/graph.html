@@ -8,9 +8,19 @@
   {{range .Styles}}
   <style>
 {{.}}
-#network {
+.container {
+  display: flex;
   width: 100%;
+}
+#network {
   height: 100vh;
+  width: 100%;
+  min-width: 600px;
+  margin:5px;
+  border: 1px solid lightgray;
+}
+#config {
+  width: 400px;
 }
   </style>
   {{end}}
@@ -22,7 +32,10 @@
 </head>
 
 <body>
-  <div id="network"></div>
+  <div class="container">
+    <div id="network"></div>
+    <div id="config"></div>
+  </div>
   <script>
    {{.MainJs}}
   </script>
