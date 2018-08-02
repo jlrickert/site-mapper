@@ -8,18 +8,6 @@ import (
 
 func TestGraphSpec(t *testing.T) {
 	Convey("Given a site map", t, func() {
-		// urls := []*Url{
-		// 	NewUrlFromSlice([]string{"google.com", "google.com"}),
-		// 	NewUrlFromSlice([]string{"google.com", "google.com/maps"}),
-		// 	NewUrlFromSlice([]string{"google.com", "google.com/maps", "google.com"}),
-		// 	NewUrlFromSlice([]string{"google.com", "google.com/email"}),
-		// 	NewUrlFromSlice([]string{"google.com", "google.com/email", "google.com/email"}),
-		// 	NewUrlFromSlice([]string{"google.com", "google.com/email", "google.com"}),
-		// 	NewUrlFromSlice([]string{"google.com", "google.com/images"}),
-		// 	NewUrlFromSlice([]string{"google.com", "google.com/images", "google.com/images"}),
-		// 	NewUrlFromSlice([]string{"google.com", "google.com/images", "google.com"}),
-		// }
-		// site := NewSiteMapFromSlice("google.com", urls)
 		site := NewSiteMapFromUrlPaths("https://google.com", []UrlPath{
 			UrlPath{"https://google.com", "https://google.com"},
 			UrlPath{"https://google.com", "https://google.com/maps"},
@@ -35,7 +23,8 @@ func TestGraphSpec(t *testing.T) {
 		Convey("should generate a valid standalone html file", func() {
 			file := bytes.NewBuffer([]byte{})
 
-			WriteGraphIndex(file, site)
+			graph := newGraphHtmlTemplate(site)
+			writeGraphIndex(file, graph)
 
 			contents := string(file.Bytes())
 			So(contents, ShouldContainSubstring, "google.com")

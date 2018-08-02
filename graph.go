@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"text/template"
@@ -13,16 +14,18 @@ type GraphHtmlTemplate struct {
 	MainJs  string
 }
 
-func NewGraphHtmlTemplate(url string, dot []byte) *GraphHtmlTemplate {
+func newGraphHtmlTemplate(site *SiteMap) *GraphHtmlTemplate {
+	dot := bytes.NewBuffer([]byte{})
+	site.GenerateDOT(dot)
 	return &GraphHtmlTemplate{
-		Title:   url + " Sitemap Graph",
+		Title:   site.Href + " Sitemap Graph",
 		Styles:  []string{visMinCss},
 		Scripts: []string{visMinJs},
-		MainJs:  createMainJs(dot),
+		MainJs:  createMainJs(dot.Bytes()),
 	}
 }
 
-func WriteGraphIndex(out io.Writer, graph *GraphHtmlTemplate) error {
+func writeGraphIndex(out io.Writer, graph *GraphHtmlTemplate) error {
 	t := template.Must(template.New(graph.Title).Parse(graphHTML))
 	return t.Execute(out, graph)
 }

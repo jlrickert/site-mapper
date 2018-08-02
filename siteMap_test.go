@@ -179,7 +179,7 @@ func TestSiteMapSpec(t *testing.T) {
 
 			var buf bytes.Buffer
 			w := bufio.NewWriter(&buf)
-			_, err := site.GenerateDOT(w)
+			err := site.GenerateDOT(w)
 			So(err, ShouldBeNil)
 
 			err = w.Flush()
@@ -189,6 +189,8 @@ func TestSiteMapSpec(t *testing.T) {
 			for i := range lines {
 				So(contents, ShouldContainSubstring, lines[i])
 			}
+
+			So(contents, ShouldNotContainSubstring, `""`)
 		})
 	})
 }

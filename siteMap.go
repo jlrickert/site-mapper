@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 )
@@ -74,66 +73,52 @@ func (sm *SiteMap) GetNode(url string) *Node {
 	return sm.nodes[url]
 }
 
-// func (sm *SiteMap) Display(maxDepth int) {
-// 	fmt.Println(sm.Href)
-// 	sm.printNode(sm.Root, 1, maxDepth)
-// }
+func (sm *SiteMap) Display(maxDepth int) {
+	fmt.Println(sm.Href)
+	sm.printNode(sm.Root, 1, maxDepth)
+}
 
-// func (sm *SiteMap) printNode(node *Node, depth, maxDepth int) {
-// 	if depth > maxDepth {
-// 		return
-// 	}
-// 	for href := range node.links {
-// 		for i := 0; i < depth; i++ {
-// 			fmt.Print("    ")
-// 		}
-// 		n := node.links[href]
-// 		fmt.Println(n.href)
-// 		sm.printNode(n, depth+1, maxDepth)
-// 	}
-// }
+func (sm *SiteMap) printNode(node *Node, depth, maxDepth int) {
+	if depth > maxDepth {
+		return
+	}
+	for href := range node.links {
+		for i := 0; i < depth; i++ {
+			fmt.Print("    ")
+		}
+		n := node.links[href]
+		fmt.Println(n.href)
+		sm.printNode(n, depth+1, maxDepth)
+	}
+}
 
-// func (sm *SiteMap) Graph() {
-// 	// GenerateGraphIndex(sm)
-// }
-
-func (sm *SiteMap) GenerateDOT(w io.Writer) (int, error) {
-	count := 0
-	var err error
-	n, err := w.Write([]byte("digraph {\n"))
-	count += n
+func (sm *SiteMap) GenerateDOT(w io.Writer) error {
+	_, err := w.Write([]byte("digraph {\n"))
 	if err != nil {
-		return count, err
+		return err
 	}
 
 	for _, node := range sm.nodes {
-		count += n
 		if err != nil {
-			return count, err
+			return err
 		}
 		for i := range node.links {
 			src := node.href
 			dst := node.links[i].href
 			w.Write([]byte(fmt.Sprintf("    \"%s\" -> \"%s\";\n", src, dst)))
-			count += n
 			if err != nil {
-				return count, err
+				return err
 			}
 		}
 	}
-	n, err = w.Write([]byte("}"))
-	count += n
+	_, err = w.Write([]byte("}"))
 	if err != nil {
-		return count, err
+		return err
 	}
-	return count, err
+	return err
 }
 
 func (site *SiteMap) GenerateIndexHtml(w io.Writer) error {
-	dotBuffer := bytes.NewBuffer([]byte{})
-	site.GenerateDOT(dotBuffer)
-	dot := dotBuffer.Bytes()
-
-	graph := NewGraphHtmlTemplate(site.Href, dot)
-	return WriteGraphIndex(w, graph)
+	graph := newGraphHtmlTemplate(site)
+	return writeGraphIndex(w, graph)
 }
