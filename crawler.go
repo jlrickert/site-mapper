@@ -182,7 +182,10 @@ func IndexWebsite(rootUrl string, options CrawlerOptions) *SiteMap {
 			addedToSiteMap := site.AddUrlPath(*path.Clone())
 			partOfDomain := strings.Index(url, rootUrl) == 0
 			fragment := strings.Index(url, "#") >= 0
-			if addedToSiteMap && partOfDomain && !fragment {
+			mailto := strings.Contains(url, "mailto:") && strings.Contains(url, "@")
+			tele := strings.Contains(url, "tel:")
+			crawlable := !(fragment || mailto || tele)
+			if addedToSiteMap && partOfDomain && crawlable {
 				running++
 				log.Println("New crawler queued for", url)
 				go func() {
