@@ -38,11 +38,21 @@ func GenerateSiteMapDotFile(url string, options CrawlerOptions) {
 	site.GenerateDOT(file)
 }
 
+func GenerateSiteMapIndex(url string, options CrawlerOptions) {
+	file, err := os.Create("index.html")
+	defer file.Close()
+	if err != nil {
+		panic(err)
+	}
+	site := IndexWebsite(url, options)
+	site.GenerateIndexHtml(file)
+}
+
 func FindUniqueLinksCommand() {
 	seedUrl := os.Args[1]
 	urlCount := FindUniqueLinks(seedUrl, CrawlerOptions{
-		maxCrawlers: 100,
-		Throttle:    0 * time.Millisecond,
+		maxCrawlers: 5,
+		Throttle:    1000 * time.Millisecond,
 	})
 	fmt.Println("Unique Url count: " + strconv.Itoa(urlCount))
 }
@@ -55,7 +65,16 @@ func GenerateSiteMapDotFileCommand() {
 	})
 }
 
+func GenerateSiteMapIndexCommand() {
+	seedUrl := os.Args[1]
+	GenerateSiteMapIndex(seedUrl, CrawlerOptions{
+		maxCrawlers: 1000,
+		Throttle:    0 * time.Millisecond,
+	})
+}
+
 func main() {
-	GenerateSiteMapDotFileCommand()
+	// GenerateSiteMapDotFileCommand()
+	GenerateSiteMapIndexCommand()
 	// FindUniqueLinksCommand()
 }

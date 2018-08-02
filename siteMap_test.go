@@ -162,7 +162,7 @@ func TestSiteMapSpec(t *testing.T) {
 			})
 
 			lines := []string{
-				"digraph graphname",
+				"digraph {",
 				`"https://github.com/user1" -> "https://github.com/user1/project3";`,
 				`"https://github.com/user1" -> "https://github.com/user1/project4";`,
 				`"https://github.com/user1" -> "https://github.com/user1/project1";`,

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 )
@@ -99,7 +100,7 @@ func (sm *SiteMap) GetNode(url string) *Node {
 func (sm *SiteMap) GenerateDOT(w io.Writer) (int, error) {
 	count := 0
 	var err error
-	n, err := w.Write([]byte("digraph graphname {\n"))
+	n, err := w.Write([]byte("digraph {\n"))
 	count += n
 	if err != nil {
 		return count, err
@@ -128,6 +129,11 @@ func (sm *SiteMap) GenerateDOT(w io.Writer) (int, error) {
 	return count, err
 }
 
-func GenerateGraph(w io.Writer) (int, error) {
-	return w.Write([]byte{})
+func (site *SiteMap) GenerateIndexHtml(w io.Writer) error {
+	dotBuffer := bytes.NewBuffer([]byte{})
+	site.GenerateDOT(dotBuffer)
+	dot := dotBuffer.Bytes()
+
+	graph := NewGraphHtmlTemplate(site.Href, dot)
+	return WriteGraphIndex(w, graph)
 }
