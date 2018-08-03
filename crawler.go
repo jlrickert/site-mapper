@@ -5,104 +5,122 @@ import (
 	"golang.org/x/net/html"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
+	"sync"
 	"time"
 )
 
-type CrawlerOptions struct {
+type Crawler struct {
 	Throttle    time.Duration
-	maxCrawlers int
+	MaxCrawlers int
+
+	running        int
+	runningLock    sync.Mutex // lock for running counter
+	activeCrawlers Semaphore
+	chRateLimit    <-chan time.Time
 }
 
-func RecursiveCrawl(rootUrl string, options CrawlerOptions, fn func(url string)) {
-	chUrls := make(chan string)
-	chFinished := make(chan bool)
-	crawlers := make(Semaphore, options.maxCrawlers)
+func NewDefaultCrawler() *Crawler {
+	return &Crawler{
+		Throttle:    500 * time.Millisecond,
+		MaxCrawlers: 1000,
 
-	urls := make(map[string]bool)
+		running:        0,
+		runningLock:    sync.Mutex{}, // lock for running counter
+		activeCrawlers: make(Semaphore, 1000),
+		chRateLimit:    time.Tick(500 * time.Millisecond),
+	}
+}
 
-	handleFoundUrl := func(url string) {
-		chUrls <- url
+func NewCrawler(throttle time.Duration, maxCrawlers int) *Crawler {
+	crawler := Crawler{
+		Throttle:    throttle * time.Millisecond,
+		MaxCrawlers: maxCrawlers,
+
+		running:     0,
+		runningLock: sync.Mutex{},
+	}
+	if maxCrawlers > 0 {
+		crawler.activeCrawlers = make(Semaphore, maxCrawlers)
+	}
+	if throttle > 0 {
+		crawler.chRateLimit = time.Tick(throttle * time.Millisecond)
+	}
+	return &crawler
+}
+
+func (crawler *Crawler) modRunner(cb func(running int) int) {
+	crawler.runningLock.Lock()
+	crawler.running = cb(crawler.running)
+	crawler.runningLock.Unlock()
+}
+
+func (crawler *Crawler) Crawl(rootHref string, fn func(href string)) error {
+	if !Crawlable(rootHref) {
+		return nil
 	}
 
-	var rateLimit <-chan time.Time
-	if options.Throttle > 0 {
-		rateLimit = time.Tick(options.Throttle)
+	crawler.modRunner(func(n int) int {
+		log.Printf(`Queueing runner for "%s". remaining: %d`, rootHref, n+1)
+		return n + 1
+	})
+	if crawler.Throttle > 0 {
+		<-crawler.chRateLimit
 	}
-
-	running := 1
-	go func() {
-		Crawl(rootUrl, handleFoundUrl)
-		chFinished <- true
-	}()
-
-	for running != 0 {
-		select {
-		case url := <-chUrls:
-			if !hasProto(url) {
-				url = fmt.Sprintf(
-					"%s/%s",
-					strings.TrimRight(rootUrl, "/"),
-					strings.TrimRight(url, "/"),
-				)
-			}
-
-			if !urls[url] {
-				urls[url] = true
-				fn(url)
-				if strings.Contains(url, rootUrl) {
-					running++
-					log.Println("New crawlers queued", running)
-					go func() {
-						if options.Throttle > 0 {
-							<-rateLimit
-						}
-						if options.maxCrawlers > 0 {
-							crawlers.Wait(1)
-						}
-						Crawl(url, handleFoundUrl)
-						if options.maxCrawlers > 0 {
-							crawlers.Signal()
-						}
-						chFinished <- true
-					}()
-				}
-			}
-		case <-chFinished:
-			running--
-			log.Println("Crawlers finished", running)
+	if crawler.MaxCrawlers > 0 {
+		crawler.activeCrawlers.Acquire(1)
+	}
+	err := crawler.crawl(rootHref, func(href string) {
+		if !hasProto(href) {
+			href = fmt.Sprintf("%s/%s", strings.TrimRight(rootHref, "/"), href)
 		}
+		u, err := url.Parse(href)
+		if err != nil {
+			log.Println("ERROR:", err)
+			return
+		}
+		fn(u.String())
+	})
+	crawler.modRunner(func(n int) int {
+		log.Printf(`Runner for "%s" finished. %d remaining`, rootHref, n-1)
+		return n - 1
+	})
+	if crawler.MaxCrawlers > 0 {
+		crawler.activeCrawlers.Release(1)
 	}
+
+	return err
 }
 
-func Crawl(url string, fn func(url string)) error {
-	resp, err := http.Get(url)
+func (crawler *Crawler) crawl(rootHref string, fn func(href string)) error {
+	log.Println("Crawling", rootHref)
+
+	resp, err := http.Get(rootHref)
 	if err != nil {
-		return fmt.Errorf("ERROR: Failed to crawl \""+url+"\"", err)
+		return fmt.Errorf("ERROR: Failed to crawl \""+rootHref+"\"", err)
 	}
 
-	contentType := resp.Header["Content-Type"]
-	if contentType != nil || len(contentType) != 0 {
-		validTypes := []string{
-			"text/html",
-		}
-		ok := false
-		for cti := range contentType {
-			ct := contentType[cti]
-			for vti := range validTypes {
-				vt := validTypes[vti]
-				if strings.Contains(ct, vt) {
-					ok = true
-					break
-				}
-			}
-		}
-		if !ok {
-			return nil
-		}
-	}
-
-	log.Println("Crawling " + url)
+	// contentType := resp.Header["Content-Type"]
+	// if contentType != nil || len(contentType) != 0 {
+	// 	validTypes := []string{
+	// 		"text/html",
+	// 	}
+	// 	ok := false
+	// 	for cti := range contentType {
+	// 		ct := contentType[cti]
+	// 		for vti := range validTypes {
+	// 			vt := validTypes[vti]
+	// 			if strings.Contains(ct, vt) {
+	// 				ok = true
+	// 				break
+	// 			}
+	// 		}
+	// 	}
+	// 	if !ok {
+	// 		return nil
+	// 	}
+	// }
 
 	body := resp.Body
 	defer body.Close()
@@ -133,81 +151,89 @@ func Crawl(url string, fn func(url string)) error {
 	}
 }
 
-func IndexWebsite(rootUrl string, options CrawlerOptions) *SiteMap {
-	log.Println("Indexing " + rootUrl)
-	site := NewSiteMap(rootUrl)
-	chUrls := make(chan UrlPath)
+func (crawler *Crawler) RecursiveCrawl(rootHref string, fn func(href string)) {
+	chHrefs := make(chan string)
 	chFinished := make(chan bool)
 
-	var crawlers Semaphore
-	if options.maxCrawlers == 0 {
-		crawlers = make(Semaphore, 10)
-	} else if options.maxCrawlers > 0 {
-		crawlers = make(Semaphore, options.maxCrawlers)
+	hrefHandler := func(href string) {
+		chHrefs <- href
 	}
 
-	mkHandler := func(path UrlPath) func(url string) {
-		return func(url string) {
+	go func() {
+		crawler.Crawl(rootHref, hrefHandler)
+		chFinished <- true
+	}()
+
+	running := 1
+	hrefs := make(map[string]bool)
+	for running > 0 {
+		select {
+		case href := <-chHrefs:
+			if !hrefs[href] {
+				hrefs[href] = true
+				fn(href)
+				if strings.Contains(href, rootHref) && !strings.Contains(href, "..") {
+					running++
+					go func() {
+						crawler.Crawl(href, hrefHandler)
+						chFinished <- true
+					}()
+				}
+			}
+		case <-chFinished:
+			running--
+		}
+	}
+}
+
+func (crawler *Crawler) IndexWebsite(rootHref string) *SiteMap {
+	log.Println("Indexing", rootHref)
+	site := NewSiteMap(rootHref)
+	chHref := make(chan UrlPath)
+	chFinished := make(chan bool)
+
+	mkHandler := func(path UrlPath) func(string) {
+		return func(href string) {
 			p := path.Clone()
-			hits := p.AddLink(url)
+			hits := p.AddLink(href)
 			if p.Href() == "" {
 				return
 			}
 			if hits <= 1 {
-				chUrls <- *p
+				chHref <- *p
 			}
 		}
 	}
 
-	rootPath := NewUrlPath(rootUrl)
+	rootPath := NewUrlPath(rootHref)
 
 	running := 1
 	go func() {
-		err := Crawl(rootUrl, mkHandler(rootPath))
+		err := crawler.Crawl(rootHref, mkHandler(rootPath))
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 		}
 		chFinished <- true
 	}()
 
-	var rateLimit <-chan time.Time
-	if options.Throttle > 0 {
-		rateLimit = time.Tick(options.Throttle)
-	}
-
 	for running != 0 {
 		select {
-		case path := <-chUrls:
-			url := path.Href()
+		case path := <-chHref:
+			href := path.Href()
 			addedToSiteMap := site.AddUrlPath(*path.Clone())
-			partOfDomain := strings.Index(url, rootUrl) == 0
-			fragment := strings.Index(url, "#") >= 0
-			mailto := strings.Contains(url, "mailto:") && strings.Contains(url, "@")
-			tele := strings.Contains(url, "tel:")
-			crawlable := !(fragment || mailto || tele)
-			if addedToSiteMap && partOfDomain && crawlable {
+			partOfDomain := strings.Index(href, rootHref) == 0
+			if addedToSiteMap && partOfDomain {
 				running++
-				log.Println("New crawler queued for", url)
 				go func() {
-					if options.maxCrawlers > 0 {
-						crawlers.Acquire(1)
-					}
-					if options.Throttle > 0 {
-						<-rateLimit
-					}
-					err := Crawl(url, mkHandler(path))
+					err := crawler.Crawl(href, mkHandler(path))
 					if err != nil {
-						fmt.Println(err)
-					}
-					if options.maxCrawlers > 0 {
-						crawlers.Signal()
+						log.Println("ERROR:", err)
 					}
 					chFinished <- true
 				}()
 			}
 		case <-chFinished:
 			running--
-			log.Println("Crawler finished.", running, "remaining")
 		}
 	}
 	return site

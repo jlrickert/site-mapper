@@ -5,76 +5,62 @@ package main
 import (
 	"fmt"
 	"os"
-	"strconv"
-	"time"
 )
 
-func FindUniqueLinks(url string, options CrawlerOptions) int {
-	chUrls := make(chan string)
+func FindUniqueLinksCommand(crawler *Crawler) {
+	seedUrl := os.Args[1]
+	chHref := make(chan string)
+	file, err := os.Create("sitemap")
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+
 	urlCount := 0
 
+	file.Write([]byte(fmt.Sprintf("\"%s\" sitemap:\n", seedUrl)))
 	go func() {
-		for {
-			<-chUrls
+		for href := range chHref {
+			file.Write([]byte(fmt.Sprintf(" - %s\n", href)))
 			urlCount += 1
 		}
 	}()
 
-	RecursiveCrawl(url, options, func(url string) {
-		fmt.Println(" - " + url)
-		chUrls <- url
+	crawler.RecursiveCrawl(seedUrl, func(url string) {
+		chHref <- url
 	})
-	close(chUrls)
-	return urlCount
+	close(chHref)
+	file.Write([]byte(fmt.Sprintf("Unique url count: %d", urlCount)))
 }
 
-func GenerateSiteMapDotFile(url string, options CrawlerOptions) {
+func GenerateSiteMapDotFileCommand(crawler *Crawler) {
+	seedUrl := os.Args[1]
 	file, err := os.Create("out.dot")
-	defer file.Close()
 	if err != nil {
 		panic(err)
 	}
-	site := IndexWebsite(url, options)
+	defer file.Close()
+
+	site := crawler.IndexWebsite(seedUrl)
 	site.GenerateDOT(file)
 }
 
-func GenerateSiteMapIndex(url string, options CrawlerOptions) {
+func GenerateSiteMapIndexCommand(crawler *Crawler) {
+	seedUrl := os.Args[1]
+
 	file, err := os.Create("index.html")
-	defer file.Close()
 	if err != nil {
 		panic(err)
 	}
-	site := IndexWebsite(url, options)
+	defer file.Close()
+
+	site := crawler.IndexWebsite(seedUrl)
 	site.GenerateIndexHtml(file)
 }
 
-func FindUniqueLinksCommand() {
-	seedUrl := os.Args[1]
-	urlCount := FindUniqueLinks(seedUrl, CrawlerOptions{
-		maxCrawlers: 5,
-		Throttle:    1000 * time.Millisecond,
-	})
-	fmt.Println("Unique Url count: " + strconv.Itoa(urlCount))
-}
-
-func GenerateSiteMapDotFileCommand() {
-	seedUrl := os.Args[1]
-	GenerateSiteMapDotFile(seedUrl, CrawlerOptions{
-		maxCrawlers: 1,
-		Throttle:    1000 * time.Millisecond,
-	})
-}
-
-func GenerateSiteMapIndexCommand() {
-	seedUrl := os.Args[1]
-	GenerateSiteMapIndex(seedUrl, CrawlerOptions{
-		maxCrawlers: 1,
-		Throttle:    1000 * time.Millisecond,
-	})
-}
-
 func main() {
-	// GenerateSiteMapDotFileCommand()
-	GenerateSiteMapIndexCommand()
-	// FindUniqueLinksCommand()
+	crawler := NewCrawler(500, 1)
+	// GenerateSiteMapDotFileCommand(crawler)
+	GenerateSiteMapIndexCommand(crawler)
+	// FindUniqueLinksCommand(crawler)
 }
