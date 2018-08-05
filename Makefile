@@ -1,18 +1,23 @@
-SOURCES = crawler.go graph.go main.go resources.go siteMap.go url.go util.go
-RESOURCES = $(wildcard resources/*)
+BIN = site-mapper
+SOURCES = $(wildcard main.go crawler/*.go)
+RESOURCES = $(wildcard crawler/resources/*)
 
-all: build
+all: install
 
 run: build
 	./site-mapper $(filter-out $@, $(MAKECMDGOALS))
 
+install:
+	godep go install
+
 build: site-mapper
 
 site-mapper: $(SOURCES)
-	godep go build
+	godep go build -o $(BIN)
 
-resources.go: scripts/genResources.go $(RESOURCES)
+generate:
 	godep go generate
+	godep go generate github.com/jlrickert/site-mapper/crawler
 
 %:
 	@true

@@ -1,13 +1,14 @@
 package main
 
-//go:generate go run scripts/genResources.go
-
 import (
+	"flag"
 	"fmt"
 	"os"
+
+	"github.com/jlrickert/site-mapper/crawler"
 )
 
-func FindUniqueLinksCommand(crawler *Crawler) {
+func FindUniqueLinksCommand(crawler *crawler.Crawler) {
 	seedUrl := os.Args[1]
 	chHref := make(chan string)
 	file, err := os.Create("sitemap")
@@ -33,7 +34,7 @@ func FindUniqueLinksCommand(crawler *Crawler) {
 	file.Write([]byte(fmt.Sprintf("Unique url count: %d", urlCount)))
 }
 
-func GenerateSiteMapDotFileCommand(crawler *Crawler) {
+func GenerateSiteMapDotFileCommand(crawler *crawler.Crawler) {
 	seedUrl := os.Args[1]
 	file, err := os.Create("out.dot")
 	if err != nil {
@@ -45,7 +46,7 @@ func GenerateSiteMapDotFileCommand(crawler *Crawler) {
 	site.GenerateDOT(file)
 }
 
-func GenerateSiteMapIndexCommand(crawler *Crawler) {
+func GenerateSiteMapIndexCommand(crawler *crawler.Crawler) {
 	seedUrl := os.Args[1]
 
 	file, err := os.Create("index.html")
@@ -59,8 +60,9 @@ func GenerateSiteMapIndexCommand(crawler *Crawler) {
 }
 
 func main() {
-	crawler := NewCrawler(500, 1)
+	flag.Parse()
+	crawler := crawler.New(1000, 1)
 	// GenerateSiteMapDotFileCommand(crawler)
 	GenerateSiteMapIndexCommand(crawler)
-	// FindUniqueLinksCommand(crawler)
+	FindUniqueLinksCommand(crawler)
 }
